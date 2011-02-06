@@ -1,0 +1,19 @@
+Song:
+    SongID - primary key
+    ArtistID - sec key
+    AlbumID - sec key
+    Title - string
+    Rating - int
+    Path - string
+
+Album:
+    AlbumID - primary key
+    Title - string
+    Rating - int
+    Path - string
+
+Artist:
+    ArtistID - primary key
+    Name - string
+    Rating - int
+    Path - string

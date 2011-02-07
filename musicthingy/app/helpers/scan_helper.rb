@@ -1,12 +1,4 @@
 # encoding: utf-8
-require 'dl'
-require 'dl/import'
-module TaglibChecker
-    extend DL::Importer
-    dlload 'libtag_c.so'
-    extern 'void* taglib_file_tag(void*)'
-    extern 'void* taglib_file_new(char*)'
-end
 
 module ScanHelper
     class Scanner
@@ -22,12 +14,6 @@ module ScanHelper
             Find.find(folder) do |entry|
                 begin
                     if [".mp3",".aac",".ogg",".mp4"].include?(entry[-4..-1].downcase)
-                        puts check_file(entry)
-                        if not check_file(entry)
-
-                            puts "WARNING: Corrupt file.  Taglib cannot load it."
-                            next
-                        end
 
                         sleep(1) # To comply with MusicBrainz restrictions
 
@@ -96,21 +82,6 @@ module ScanHelper
             end
         end
 
-        def check_file(file)
-            # This checks the file to make sure that it is valid, so taglib
-            # won't segfault on us anymore
-            #
-            # Taken from http://www.ruby-forum.com/topic/215772
-
-
-            taglib_file = TaglibChecker.taglib_file_new(file)
-
-            if taglib_file.null?
-                return false
-            else
-                return true
-            end
-        end
 
         def get_tags(file)
             tag = TagLib::File.new(file)

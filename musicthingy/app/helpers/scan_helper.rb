@@ -1,6 +1,14 @@
 # encoding: utf-8
-module ScanHelper
+require 'dl'
+require 'dl/import'
+module TaglibChecker
+    extend DL::Importer
+    dlload 'libtag_c.so'
+    extern 'void* taglib_file_tag(void*)'
+    extern 'void* taglib_file_new(char*)'
+end
 
+module ScanHelper
     class Scanner
         def scan_folder(folder)
             require 'rbrainz'
@@ -13,7 +21,13 @@ module ScanHelper
 
             Find.find(folder) do |entry|
                 begin
-                    if entry[-4..-1].downcase.include?(".mp3")
+                    if [".mp3",".aac",".ogg",".mp4"].include?(entry[-4..-1].downcase)
+                        puts check_file(entry)
+                        if not check_file(entry)
+
+                            puts "WARNING: Corrupt file.  Taglib cannot load it."
+                            next
+                        end
 
                         sleep(1) # To comply with MusicBrainz restrictions
 
@@ -23,6 +37,10 @@ module ScanHelper
                         # cache to minimize queries to musicbrainz
 
                         artist_tag, album_tag, track_tag = get_tags(entry)
+                        if artist_tag == nil and album_tag == nil and track_tag == nil
+                            puts "Unable to read file", entry
+                            next
+                        end
 
                         if artist_cache[artist_tag] != nil
                             artist_name, artist_id, artist_score = artist_cache[artist_tag]
@@ -78,24 +96,38 @@ module ScanHelper
             end
         end
 
+        def check_file(file)
+            # This checks the file to make sure that it is valid, so taglib
+            # won't segfault on us anymore
+            #
+            # Taken from http://www.ruby-forum.com/topic/215772
+
+
+            taglib_file = TaglibChecker.taglib_file_new(file)
+
+            if taglib_file.null?
+                return false
+            else
+                return true
+            end
+        end
+
         def get_tags(file)
             tag = TagLib::File.new(file)
+            if tag != nil
+                artist_tag = self.format_string(tag.artist.to_s)
+                album_tag = self.format_string(tag.album.to_s)
+                track_tag = self.format_string(tag.title.to_s)
 
-            artist_tag = self.format_string(tag.artist.to_s)
-            album_tag = self.format_string(tag.album.to_s)
-            track_tag = self.format_string(tag.title.to_s)
+                # Have this be a regex string in the config file somewhere so the
+                # user can set up how the directory is listed.
 
-            # Have this be a regex string in the config file somewhere so the
-            # user can set up how the directory is listed.
+                tag.close()
 
-            if track_tag.strip() == ""
-                track_tag = file[file.rindex("/")+1, -5]
-                tag.title = track_tag
-                tag.save()
+                return artist_tag, album_tag, track_tag
+            else # for some reason we got a null pointer to the file from taglib
+                return nil, nil, nil
             end
-            tag.close()
-
-            return artist_tag, album_tag, track_tag
         end
 
         def set_tags(file, artist_tag, album_tag, track_tag)

@@ -1,0 +1,42 @@
+Posted by Aaron Patterson (Guest)
+on 2010-10-18 22:57
+(Received via mailing list)
+
+Issue #3752 has been updated by Aaron Patterson.
+
+Status changed from Assigned to Rejected
+
+If you pass a wrong pointer to a function, it will segv just like the C
+code would segv.  DL is not meant to protect you from errors you could
+also make in C.
+
+Here is an example of doing a null check, but with a crash.  Provide a
+good file to taglib, and it won't crash.
+
+    require 'dl'
+        require 'dl/import'
+
+            module Foo
+                  extend DL::Importer
+                        dlload '/opt/local/lib/libtag_c.dylib'
+                              extern 'void* taglib_file_tag(void*)'
+                                    extern 'void* taglib_file_new(char*)'
+                                        end
+
+                                            taglib_file =
+                                            Foo.taglib_file_new(ARGV[0] ||
+                                            'foo')
+
+                                                if taglib_file.null?
+                                                      puts "bad file"
+                                                            Foo.taglib_file_tag(taglib_file)
+                                                            # This will SEGV
+                                                            # because it's a
+                                                            NULL pointer
+                                                                else
+                                                                      file_tag
+                                                                      =
+                                                                      Foo.taglib_file_tag(taglib_file)
+                                                                          end
+
+
